@@ -41,15 +41,15 @@ However the router seems to be able to deal with this.
 ## How The Script Works
 The script is invoked each time the DHCP server leases/frees an IP address to a client.
 * Case new DHCP lease is created:
-  1. Get host name from DHCP lease and continue if it exists.
-  2. Use lease's IP address to find matching network.
-  3. Extract the domain from the first matching network
-  4. Create fully qualified domain name from host name and domain if domain is set, otherwise use only the host name.
-  5. Check if a DNS record exists for lease's IP address. If a record exists and the record's name is different from current
+  * Get host name from DHCP lease and continue if it exists.
+  * Use lease's IP address to find matching network.
+  * Extract the domain from the first matching network
+  * Create fully qualified domain name from host name and domain if domain is set, otherwise use only the host name.
+  * Check if a DNS record exists for lease's IP address. If a record exists and the record's name is different from current
        fully   qualified domain name then update it, otherwise do nothing.
-  6. If no DNS record exists, create one for lease's IP address, fully qualified domain name and configured TTL.
+  * If no DNS record exists, create one for lease's IP address, fully qualified domain name and configured TTL.
 * Case DHCP lease is freed:
-  1. Find all DNS record for lease's IP address.
-  2. Iterate over these records and remove them.
+  * Find all DNS record for lease's IP address.
+  * Iterate over these records and remove them.
 ## Miscellaneous
 * Logging topics: debug, script
