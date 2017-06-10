@@ -1,0 +1,68 @@
+# DHCP lease to DNS record script for MikroTik RouterOS (http://www.mikrotik.com).
+#
+# Copyright (C) 2017++ Steff Lukas <steff.lukas@luossfi.org>
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+# ===================== Script Setup Area =====================
+# Test variables if script is not used as lease-script
+#:local leaseBound "1"
+#:local leaseActIP 192.168.1.1
+
+# define the TTL for the resulting DNS records
+:local ttl "1d 00:00:00"
+# =============================================================
+# =============================================================
+
+:if ( $leaseBound = "1" ) do={
+  :log debug "new lease bound for ip: $leaseActIP"
+#get actual lease and associated host-name
+  /ip dhcp-server lease
+  :local lease ( [ find where $leaseActIP = address ]->0 )
+  :local hostname [ get $lease host-name ]
+  :log debug "associated host-name: $hostname"
+
+# Only continue if hostname is known
+  :if ( [ :len $hostname ] > 0 ) do={
+# Find network for leased ip and get its domain
+    /ip dhcp-server network
+    :local domain [ get ( [ find where $leaseActIP in address ]->0 ) domain ]
+    :local fqdn
+# If domain is set create fully qualified domain name, else use hostname only
+    :if ( [ :len $domain ] > 0 ) do={
+      :set fqdn "$hostname.$domain"
+    } else={
+      :set fqdn $hostname
+    }
+    :log debug "resulting fully qualified domain name: $fqdn"
+
+    /ip dns static
+    :local dnsrecords [ find where $leaseActIP = address ]
+    :if ( [ :len $dnsrecords ] > 0 && [ get  ( $dnsrecords->0 ) name ] != $fqdn )  do={
+      set ( $dnsrecords->0 ) name=$fqdn
+      :log debug "update dns record"
+    } else={
+      add address=$leaseActIP name=$fqdn ttl=$ttl
+      :log debug "create new dns record"
+    }
+  }
+
+} else={
+# Remove dns record(s) for unbound lease's ip address
+  /ip dns static
+	:foreach dnsrecord in=[ find where address=$leaseActIP ] do={
+		:log debug "removing dns record for ip $leaseActIP and domain name $[get $dnsrecord name]"
+		remove $dnsrecord
+	}
+}
